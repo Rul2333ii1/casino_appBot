@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mines - Поиск мин</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0c1a30, #1a365d);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: #fff;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 550px;
+            background: rgba(0, 10, 30, 0.9);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            overflow: hidden;
+            position: relative;
+            padding: 25px;
+            border: 2px solid #00b4d8;
+        }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #00b4d8;
+        }
+        
+        .title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        h1 {
+            font-size: 2.2rem;
+            background: linear-gradient(90deg, #ffd700, #ffec8b);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            letter-spacing: 1px;
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logo {
+            height: 40px;
+            filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.7));
+        }
+        
+        .game-board {
+            position: relative;
+            margin: 0 auto 25px;
+            width: 400px;
+            height: 400px;
+            background: rgba(0, 40, 85, 0.7);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #00b4d8;
+            box-shadow: inset 0 0 20px rgba(0, 180, 216, 0.4), 
+                        0 5px 25px rgba(0, 0, 0, 0.5);
+        }
+        
+        .cells-board-mask {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        
+        .animated-highlight {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, rgba(255,215,0,0.6) 0%, rgba(255,215,0,0) 70%);
+            border-radius: 50%;
+            animation: pulse 4s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(0.8); opacity: 0.7; }
+            50% { transform: scale(1.5); opacity: 0.3; }
+            100% { transform: scale(0.8); opacity: 0.7; }
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            gap: 2px;
+            width: 100%;
+            height: 100%;
+            padding: 10px;
+        }
+        
+        .cell {
+            background: linear-gradient(135deg, #0077b6, #00b4d8);
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .cell:hover {
+            transform: scale(0.95);
+            background: linear-gradient(135deg, #00b4d8, #90e0ef);
+        }
+        
+        .cell.has-trap::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 215, 0, 0.1);
+            z-index: 1;
+        }
+        
+        .trap {
+            color: #ffd700;
+            font-size: 48px;
+            text-shadow: 0 0 15px rgba(255, 215, 0, 0.9);
+            z-index: 2;
+            animation: starPulse 1.5s infinite alternate;
+        }
+        
+        @keyframes starPulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.3); }
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            background: rgba(0, 30, 60, 0.7);
+            border-radius: 15px;
+            border: 1px solid #00b4d8;
+            margin-bottom: 20px;
+        }
+        
+        .trap-control {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .trap-control label {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #90e0ef;
+        }
+        
+        .count-display {
+            width: 50px;
+            height: 50px;
+            background: #0077b6;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #ffd700;
+            border: 3px solid #00b4d8;
+            box-shadow: 0 0 15px rgba(0, 180, 216, 0.6);
+        }
+        
+        .arrow-btn {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(90deg, #0077b6, #00b4d8);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 116, 217, 0.4);
+        }
+        
+        .arrow-btn:hover {
+            background: linear-gradient(90deg, #00b4d8, #90e0ef);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 116, 217, 0.6);
+        }
+        
+        .arrow-btn:active {
+            transform: translateY(1px);
+            box-shadow: 0 3px 10px rgba(0, 116, 217, 0.4);
+        }
+        
+        #analyzeBtn {
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            background: linear-gradient(90deg, #ff8c00, #ffd700);
+            color: #1a365d;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
+            letter-spacing: 1px;
+            margin-top: 10px;
+        }
+        
+        #analyzeBtn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(255, 215, 0, 0.6);
+            background: linear-gradient(90deg, #ffd700, #fff8dc);
+        }
+        
+        #analyzeBtn:active {
+            transform: translateY(1px);
+            box-shadow: 0 3px 10px rgba(255, 215, 0, 0.4);
+        }
+        
+        .game-info {
+            text-align: center;
+            padding: 15px;
+            background: rgba(0, 30, 60, 0.7);
+            border-radius: 10px;
+            border: 1px solid #00b4d8;
+            margin-bottom: 20px;
+        }
+        
+        .game-info p {
+            margin: 10px 0;
+            font-size: 1.1rem;
+            color: #90e0ef;
+        }
+        
+        .highlight {
+            color: #ffd700;
+            font-weight: bold;
+        }
+        
+        footer {
+            margin-top: 15px;
+            text-align: center;
+            color: #90e0ef;
+            font-size: 0.9rem;
+            padding-top: 15px;
+            border-top: 1px solid #00b4d8;
+        }
+        
+        .mines-counter {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 1rem;
+            color: #ffd700;
+            border: 1px solid #00b4d8;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        @media (max-width: 600px) {
+            .game-board {
+                width: 90vw;
+                height: 90vw;
+                max-width: 400px;
+                max-height: 400px;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="title">
+                <i class="fas fa-bomb" style="font-size: 32px; color: #ffd700;"></i>
+                <h1>Mines</h1>
+            </div>
+            <div class="logo-container">
+                <div class="SvgLogo_svgLogoContainer_MdO5l">
+                    <img src="https://v1.bundlecdn.com/img/1win-normal.5a6f93b4b.svg" alt="1Win" class="logo">
+                </div>
+            </div>
+        </header>
+        
+        <div class="game-board">
+            <div class="mines-counter">
+                <i class="fas fa-bomb"></i> 
+                <span id="minesCount">0</span>/<span id="totalMines">5</span>
+            </div>
+            <div class="cells-board-mask">
+                <div class="animated-highlight" style="top: 30%; left: 40%;"></div>
+                <div class="animated-highlight" style="top: 70%; left: 60%; animation-delay: 1s;"></div>
+            </div>
+            <div class="grid" id="gameGrid">
+                <!-- Клетки будут сгенерированы через JavaScript -->
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="trap-control">
+                <label for="trapCount">Количество мин:</label>
+                <button class="arrow-btn" id="decreaseBtn">-</button>
+                <div class="count-display" id="countValue">5</div>
+                <button class="arrow-btn" id="increaseBtn">+</button>
+            </div>
+            <button id="analyzeBtn">Анализировать</button>
+        </div>
+        
+        <div class="game-info">
+            <p>Выберите количество мин от <span class="highlight">1 до 5</span>, затем нажмите "Анализировать"</p>
+            <p>После анализа на поле появятся мины, помеченные <span class="highlight">★</span></p>
+        </div>
+        
+        <footer>
+            <p>Игра "Mines" | Мины случайным образом размещаются на игровом поле</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const decreaseBtn = document.getElementById('decreaseBtn');
+            const increaseBtn = document.getElementById('increaseBtn');
+            const countValue = document.getElementById('countValue');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const gameGrid = document.getElementById('gameGrid');
+            const minesCount = document.getElementById('minesCount');
+            const totalMines = document.getElementById('totalMines');
+            
+            let trapCount = 5;
+            totalMines.textContent = trapCount;
+            
+            // Инициализация игрового поля 5x5
+            function initializeGrid() {
+                gameGrid.innerHTML = '';
+                for (let i = 0; i < 25; i++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.dataset.index = i;
+                    gameGrid.appendChild(cell);
+                }
+            }
+            
+            // Обновление отображения количества мин
+            function updateTrapCount(value) {
+                trapCount = value;
+                countValue.textContent = trapCount;
+                totalMines.textContent = trapCount;
+            }
+            
+            // Уменьшение количества мин
+            decreaseBtn.addEventListener('click', function() {
+                if (trapCount > 1) {
+                    updateTrapCount(trapCount - 1);
+                }
+            });
+            
+            // Увеличение количества мин
+            increaseBtn.addEventListener('click', function() {
+                if (trapCount < 5) {
+                    updateTrapCount(trapCount + 1);
+                }
+            });
+            
+            // Обработка нажатия кнопки "Анализировать"
+            analyzeBtn.addEventListener('click', function() {
+                // Сброс предыдущих мин
+                document.querySelectorAll('.cell').forEach(cell => {
+                    cell.classList.remove('has-trap');
+                    cell.innerHTML = '';
+                });
+                
+                // Обновление счетчика мин
+                minesCount.textContent = trapCount;
+                
+                // Генерация случайных позиций для мин
+                const trapPositions = [];
+                while (trapPositions.length < trapCount) {
+                    const randomPos = Math.floor(Math.random() * 25);
+                    if (!trapPositions.includes(randomPos)) {
+                        trapPositions.push(randomPos);
+                    }
+                }
+                
+                // Добавление мин на поле
+                trapPositions.forEach(pos => {
+                    const cell = document.querySelector(`.cell[data-index="${pos}"]`);
+                    cell.classList.add('has-trap');
+                    
+                    const trapIcon = document.createElement('div');
+                    trapIcon.classList.add('trap');
+                    trapIcon.innerHTML = '★';
+                    cell.appendChild(trapIcon);
+                });
+                
+                // Анимация кнопки
+                this.classList.add('clicked');
+                setTimeout(() => this.classList.remove('clicked'), 300);
+                
+                // Анимация мин
+                setTimeout(() => {
+                    document.querySelectorAll('.trap').forEach((trap, index) => {
+                        setTimeout(() => {
+                            trap.style.animation = 'starPulse 0.8s ease-in-out';
+                        }, index * 150);
+                    });
+                }, 300);
+            });
+            
+            // Инициализация игрового поля при загрузке
+            initializeGrid();
+            minesCount.textContent = '0';
+        });
+    </script>
+</body>
+</html>
